@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <title>Gaasipedaal – Sõidukite otsinguvahend</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+  --bg-color: #121212;
+  --text-color: #f0f0f0;
+  --card-bg: #1e1e1e;
+  --link-color: #5c7a99;
+}
+    
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+      max-width: 800px;
+      margin: auto;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+    }
+    .theme-toggle {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border: none;
+      background: var(--card-bg);
+      color: var(--text-color);
+      border-radius: 5px;
+    }
+    .search-box {
+      margin: 1rem 0;
+    }
+    select, input[type="text"], input[type="number"] {
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      margin-right: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .car-item {
+      background: var(--card-bg);
+      margin: 1rem 0;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .car-item a {
+      text-decoration: none;
+      color: var(--link-color);
+    }
+    .footer {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: var(--text-color);
+    }
+    .logo {
+      height: 40px;
+    }
+    .contact {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ccc;
+    }
+    .favorite {
+      float: right;
+      cursor: pointer;
+      font-size: 1.6rem;
+      color: gold;
+      transition: transform 0.2s;
+    }
+    .favorite:hover {
+      transform: scale(1.3);
+    }
+    nav a.active {
+      border-bottom: 2px solid var(--link-color);
+      padding-bottom: 2px;
+      background-color: var(--link-color);
+      color: white;
+      border-radius: 5px;
+      padding: 0.3rem 0.6rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+      @media (max-width: 768px) {
+      body {
+        padding: 0.5rem;
+      }
+      .search-box {
+        display: flex;
+        flex-direction: column;
+      }
+      .search-box label,
+      .search-box input,
+      .search-box select {
+        width: 100%;
+        margin-bottom: 0.5rem;
+      }
+      .header,
+      nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      nav span {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+      }
+    }
+</style>
+  <script>
+    function toggleFavorite(id) {
+  let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(item => item !== id);
+    document.getElementById(id).querySelector('.favorite').textContent = '☆';
+  } else {
+    favorites.push(id);
+    document.getElementById(id).querySelector('.favorite').textContent = '★';
+  }
+  localStorage.setItem('favorites', JSON.stringify(favorites));
+}
+
+function restoreFavorites() {
+  const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+  favorites.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.querySelector('.favorite').textContent = '★';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', restoreFavorites);
+
+function filterTrucks() {
+  const mark = document.getElementById('filter-truck-mark').value.toLowerCase();
+  const axles = document.getElementById('filter-truck-axles').value;
+  const maxPrice = parseFloat(document.getElementById('filter-truck-price').value);
+  document.querySelectorAll('#veoautod .car-item').forEach(item => {
+    const matchMark = !mark || item.innerHTML.toLowerCase().includes(mark);
+    const matchAxles = !axles || item.innerHTML.includes(axles);
+    const priceMatch = !maxPrice || parseFloat(item.innerHTML.replace(/[^0-9]/g, '')) <= maxPrice;
+    item.style.display = (matchMark && matchAxles && priceMatch) ? '' : 'none';
+  });
+}
+
+function filterSpecial() {
+  const type = document.getElementById('filter-special-type').value.toLowerCase();
+  const equip = document.getElementById('filter-special-equipment').value.toLowerCase();
+  document.querySelectorAll('#eritehnika .car-item').forEach(item => {
+    const matchType = !type || item.innerHTML.toLowerCase().includes(type);
+    const matchEquip = !equip || item.dataset.equipment.toLowerCase().includes(equip);
+    item.style.display = (matchType && matchEquip) ? '' : 'none';
+  });
+}
+
+function filterAgro() {
+  const mark = document.getElementById('filter-agro-mark').value.toLowerCase();
+  const type = document.getElementById('filter-agro-type').value.toLowerCase();
+  const equip = document.getElementById('filter-agro-equipment').value.toLowerCase();
+  document.querySelectorAll('#põllumajandustehnika .car-item').forEach(item => {
+    const matchMark = !mark || item.innerHTML.toLowerCase().includes(mark);
+    const matchType = !type || item.innerHTML.toLowerCase().includes(type);
+    const matchEquip = !equip || item.dataset.equipment.toLowerCase().includes(equip);
+    item.style.display = (matchMark && matchType && matchEquip) ? '' : 'none';
+  });
+}
+  function showSection(id) {
+  const sections = document.querySelectorAll('section');
+  sections.forEach(sec => sec.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+  document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
+  const navLinks = document.querySelectorAll('nav a');
+  navLinks.forEach(link => {
+    if (link.getAttribute('onclick') === `showSection('${id}')`) {
+      link.classList.add('active');
+    }
+  });
+  if (id === 'lemmikud') {
+    loadFavoritesPage();
+  }
+}
+
+function loadFavoritesPage() {
+  const container = document.getElementById('favorites-container');
+  container.innerHTML = '';
+  const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+  favorites.forEach(id => {
+    const original = document.getElementById(id);
+    if (original) {
+      const clone = original.cloneNode(true);
+      container.appendChild(clone);
+    }
+  });
+}
+
+$1
+</head>
+<body data-theme="dark">
+  <header class="header">
+  <h1><img src="logo.png" alt="Gaasipedaal logo" class="logo"> Gaasipedaal</h1>
+  <button class="theme-toggle" onclick="toggleTheme()">Vaheta teemat</button>
+</header>
+
+$1<a href="#" onclick="showSection('lemmikud')">Lemmikud</a>
+$2$3 display:flex; gap:0.5rem; align-items:center;">
+    <a href="https://soov.ee" target="_blank"><img src="https://www.soov.ee/favicon.ico" alt="Soov.ee" style="height:20px"></a>
+    <a href="https://auto24.ee" target="_blank"><img src="https://www.auto24.ee/favicon.ico" alt="Auto24.ee" style="height:20px"></a>
+    <a href="https://autodiiler.ee" target="_blank"><img src="https://autodiiler.ee/favicon.ico" alt="Autodiiler.ee" style="height:20px"></a>
+    <a href="https://veego.ee" target="_blank"><img src="https://veego.ee/favicon.ico" alt="Veego.ee" style="height:20px"></a>
+    <a href="https://www.okidoki.ee" target="_blank"><img src="https://www.okidoki.ee/favicon.ico" alt="Okidoki.ee" style="height:20px"></a>
+    <a href="https://kuldnebors.ee" target="_blank"><img src="https://kuldnebors.ee/favicon.ico" alt="KuldneBörs.ee" style="height:20px"></a>
+  </span>
+</nav>
+
+<section id="autod" style="display:block">
+  <div class="search-box">
+    <label>Mark:</label>
+    <select id="filter-mark" onchange="filterCars()">
+      <option value="">Kõik</option>
+      <option value="BMW">BMW</option>
+      <option value="Toyota">Toyota</option>
+      <option value="Audi">Audi</option>
+      <option value="Honda">Honda</option>
+    </select>
+    <label>Mudel:</label>
+    <select id="filter-model" onchange="filterCars()">
+      <option value="">Kõik</option>
+      <option value="320d">320d</option>
+      <option value="Avensis">Avensis</option>
+      <option value="Civic">Civic</option>
+    </select>
+    <label>Kütus:</label>
+    <select id="filter-fuel" onchange="filterCars()">
+      <option value="">Kõik</option>
+      <option value="Diisel">Diisel</option>
+      <option value="Bensiin">Bensiin</option>
+    </select>
+    <label>Käigukast:</label>
+    <select id="filter-gearbox" onchange="filterCars()">
+      <option value="">Kõik</option>
+      <option value="Automaat">Automaat</option>
+      <option value="Manuaal">Manuaal</option>
+    </select>
+    <label>Aasta:</label>
+    <input type="number" id="filter-year-min" placeholder="Alates" onchange="filterCars()">
+    <input type="number" id="filter-year-max" placeholder="Kuni" onchange="filterCars()">
+    <label>Max hind (€):</label>
+    <input type="number" id="filter-price-max" placeholder="nt 10000" onchange="filterCars()">
+    <label>Varustus:</label>
+    <input type="text" id="filter-equipment" placeholder="nt kliima, nahksisu" oninput="filterCars()">
+  </div>
+  <div class="car-item" id="bmw-320d" data-equipment="nahksisu, kliima">
+    <span class="favorite" onclick="toggleFavorite('bmw-320d')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=BMW" alt="BMW" style="float:right; margin-left:10px;"><strong>BMW 320d 2008</strong><br>
+    Hind: 4 500 €<br>
+    Asukoht: Tallinn<br>
+    Allikad:<br>
+    <a href="https://soov.ee/kuulutus123" target="_blank">Soov.ee kuulutus</a><br>
+    <a href="https://auto24.ee/kuulutus123" target="_blank">Auto24.ee kuulutus</a>
+  </div>
+
+  <div class="car-item" id="toyota-avensis" data-equipment="kliima, püsikiirushoidja">
+    <span class="favorite" onclick="toggleFavorite('toyota-avensis')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=Toyota" alt="Toyota" style="float:right; margin-left:10px;"><strong>Toyota Avensis 2011</strong><br>
+    Hind: 5 900 €<br>
+    Asukoht: Tartu<br>
+    Allikad:<br>
+    <a href="https://autodiiler.ee/kuulutus456" target="_blank">Autodiiler.ee kuulutus</a><br>
+    <a href="https://auto24.ee/kuulutus789" target="_blank">Auto24.ee kuulutus</a>
+  </div>
+
+  <div class="car-item" id="honda-civic" data-equipment="kliima">
+    <span class="favorite" onclick="toggleFavorite('honda-civic')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=Honda" alt="Honda" style="float:right; margin-left:10px;"><strong>Honda Civic 2010</strong><br>
+    Hind: 3 200 €<br>
+    Asukoht: Riia<br>
+    Allikad:<br>
+    <a href="https://auto24.ee/kuulutusbike1" target="_blank">Auto24.ee kuulutus</a>
+  </div>
+
+  $1
+
+<section id="lemmikud" style="display:none">
+  <h2>Lemmikud</h2>
+  <div id="favorites-container"></div>
+</section>
+
+$2 style="display:none">
+  <h2>Mootorrattad</h2>
+  <div class="car-item" id="yamaha-r1" data-equipment="ABS, LED tuled">
+    <span class="favorite" onclick="toggleFavorite('yamaha-r1')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=Yamaha" alt="Yamaha" style="float:right; margin-left:10px;"><strong>Yamaha R1 2018</strong><br>
+    Hind: 9 000 €<br>
+    Asukoht: Pärnu<br>
+    Allikas:<br>
+    <a href="https://soov.ee/kuulutusmoto1" target="_blank">Soov.ee kuulutus</a>
+  </div>
+</section>
+
+<section id="haagised" style="display:none">
+  <h2>Haagised</h2>
+  <div class="car-item" id="haagis750" data-equipment="tent">
+    <span class="favorite" onclick="toggleFavorite('haagis750')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=Haagis" alt="Haagis" style="float:right; margin-left:10px;"><strong>750 kg Haagis</strong><br>
+    Hind: 650 €<br>
+    Asukoht: Viljandi<br>
+    Allikas:<br>
+    <a href="https://kuldnebors.ee/kuulutushaagis1" target="_blank">KuldneBörs.ee kuulutus</a>
+  </div>
+</section>
+
+<section id="bussid" style="display:none">
+  <h2>Bussid</h2>
+  <div class="search-box">
+    <label>Mark:</label>
+    <select id="filter-buss-mark" onchange="filterBuses()">
+      <option value="">Kõik</option>
+      <option value="VW">VW</option>
+      <option value="Mercedes">Mercedes</option>
+      <option value="Renault">Renault</option>
+    </select>
+    <label>Mudel:</label>
+    <select id="filter-buss-model" onchange="filterBuses()">
+      <option value="">Kõik</option>
+      <option value="Transporter">Transporter</option>
+      <option value="Vito">Vito</option>
+      <option value="Master">Master</option>
+    </select>
+    <label>Kohti vähemalt:</label>
+    <input type="number" id="filter-buss-kohad" placeholder="nt 9" oninput="filterBuses()">
+  </div>
+  <div class="car-item" id="vw-transporter" data-mark="vw" data-seats="9">
+    <span class="favorite" onclick="toggleFavorite('vw-transporter')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=VW" alt="VW" style="float:right; margin-left:10px;"><strong>VW Transporter T5</strong><br>
+    Hind: 7 200 €<br>
+    Asukoht: Tallinn<br>
+    Allikas:<br>
+    <a href="https://soov.ee/kuulutusbuss1" target="_blank">Soov.ee kuulutus</a>
+  </div>
+</section>
+
+$1
+  <div class="search-box">
+    <label>Mark:</label>
+    <select id="filter-truck-mark" onchange="filterTrucks()">
+      <option value="">Kõik</option>
+      <option value="Volvo">Volvo</option>
+      <option value="Scania">Scania</option>
+    </select>
+    <label>Telgede arv:</label>
+    <select id="filter-truck-axles" onchange="filterTrucks()">
+      <option value="">Kõik</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+    <label>Max hind (€):</label>
+    <input type="number" id="filter-truck-price" onchange="filterTrucks()">
+  </div>
+  <div class="car-item" id="volvo-fh" data-equipment="ADR, magamisruum">
+    <span class="favorite" onclick="toggleFavorite('volvo-fh')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=Volvo" alt="Volvo" style="float:right; margin-left:10px;"><strong>Volvo FH 460</strong><br>
+    Hind: 19 500 €<br>
+    Asukoht: Tartu<br>
+    Allikas:<br>
+    <a href="https://auto24.ee/kuulutusveok1" target="_blank">Auto24.ee kuulutus</a>
+  </div>
+</section>
+
+$1
+  <div class="search-box">
+    <label>Tüüp:</label>
+    <select id="filter-special-type" onchange="filterSpecial()">
+      <option value="">Kõik</option>
+      <option value="Ekskavaator">Ekskavaator</option>
+      <option value="Laadur">Laadur</option>
+    </select>
+    <label>Varustus:</label>
+    <input type="text" id="filter-special-equipment" placeholder="nt kopp" oninput="filterSpecial()">
+  </div>
+  <div class="car-item" id="jcb-ekskaavaator" data-equipment="kopp, kraan">
+    <span class="favorite" onclick="toggleFavorite('jcb-ekskaavaator')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=JCB" alt="JCB" style="float:right; margin-left:10px;"><strong>JCB Ekskavaator 3CX</strong><br>
+    Hind: 22 000 €<br>
+    Asukoht: Põlva<br>
+    Allikas:<br>
+    <a href="https://kuldnebors.ee/kuulutustehnika1" target="_blank">KuldneBörs.ee kuulutus</a>
+  </div>
+</section>
+
+$1
+  <div class="search-box">
+    <label>Mark:</label>
+    <select id="filter-agro-mark" onchange="filterAgro()">
+      <option value="">Kõik</option>
+      <option value="John Deere">John Deere</option>
+      <option value="New Holland">New Holland</option>
+    </select>
+    <label>Tüüp:</label>
+    <select id="filter-agro-type" onchange="filterAgro()">
+      <option value="">Kõik</option>
+      <option value="Traktor">Traktor</option>
+      <option value="Kombain">Kombain</option>
+    </select>
+    <label>Varustus:</label>
+    <input type="text" id="filter-agro-equipment" placeholder="nt esilaadur" oninput="filterAgro()">
+  </div>
+  <div class="car-item" id="john-deere" data-equipment="esilaadur, kliima">
+    <span class="favorite" onclick="toggleFavorite('john-deere')">☆</span>
+    <img src="https://via.placeholder.com/100x60?text=JD" alt="John Deere" style="float:right; margin-left:10px;"><strong>John Deere 6130M</strong><br>
+    Hind: 34 000 €<br>
+    Asukoht: Jõgeva<br>
+    Allikas:<br>
+    <a href="https://autodiiler.ee/kuulutustraktor1" target="_blank">Autodiiler.ee kuulutus</a>
+  </div>
+</section>
+
+<section id="ostujuhend" class="info-section" style="display:none">
+  <h2>Auto ostja meelespea</h2>
+  <ul>
+    <li>Kontrolli hooldusajalugu ja VIN-koodi</li>
+    <li>Tee kindlasti proovisõit</li>
+    <li>Uuri auto tausta – kas tegemist on avariilise sõidukiga?</li>
+    <li>Võrdle sarnaste mudelite hindu</li>
+    <li>Veendu, et auto vastab kuulutuse kirjeldusele</li>
+  </ul>
+</section>
+
+<div class="contact">
+  <p>Kontakt: info@gaspedaal.ee</p>
+  <p>© 2025 Gaasipedaal. Kõik õigused kaitstud.</p>
+</div>
+</body>
+</html>
+</body>
+</html>
